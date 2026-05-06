@@ -1,0 +1,61 @@
+{
+  "name": "n8n-nodes-browsercloud",
+  "version": "0.1.0",
+  "description": "n8n community node to run browser automation scripts on TestMu AI Browser Cloud",
+  "keywords": [
+    "n8n-community-node-package",
+    "browsercloud",
+    "testmuai",
+    "lambdatest",
+    "browser-automation",
+    "playwright",
+    "puppeteer",
+    "selenium"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "author": {
+    "name": "Your Name",
+    "email": "you@example.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-user/n8n-nodes-browsercloud.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "lint": "eslint nodes credentials --ext .ts",
+    "lint:fix": "eslint nodes credentials --ext .ts --fix",
+    "prepublishOnly": "npm run build && npm run lint"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/BrowsercloudApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Browsercloud/Browsercloud.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.16.0",
+    "gulp": "^4.0.2",
+    "n8n-workflow": "^1.65.0",
+    "typescript": "5.4"
+  },
+  "dependencies": {
+    "@testmuai/browser-cloud": "*"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
