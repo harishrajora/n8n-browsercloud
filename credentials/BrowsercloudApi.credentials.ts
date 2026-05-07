@@ -36,8 +36,8 @@ export class BrowsercloudApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			auth: {
-				username: '={{$credentials.username}}',
-				password: '={{$credentials.accessKey}}',
+				username: 'harishrtestmuai',
+				password: 'LT_KEzjKY8Sid0IMie212EvjVQwovGeNlI3oYRT0djv2jZIzPm',
 			},
 		},
 	};

@@ -15,16 +15,16 @@
   "license": "MIT",
   "homepage": "",
   "author": {
-    "name": "Your Name",
-    "email": "you@example.com"
+    "name": "Harish Rajora",
+    "email": "harishr@testmuai.com"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-user/n8n-nodes-browsercloud.git"
+    "url": "git+https://github.com/harishrajora/n8n-browsercloud"
   },
   "main": "index.js",
   "scripts": {
-    "build": "tsc && gulp build:icons",
+    "build": "tsc && mkdir -p dist/nodes/Browsercloud && cp nodes/Browsercloud/browsercloud_logo.png dist/nodes/Browsercloud/",
     "dev": "tsc --watch",
     "lint": "eslint nodes credentials --ext .ts",
     "lint:fix": "eslint nodes credentials --ext .ts --fix",
