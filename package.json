@@ -24,7 +24,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "build": "tsc && mkdir -p dist/nodes/Browsercloud && cp nodes/Browsercloud/browsercloud_logo.png dist/nodes/Browsercloud/",
+    "build": "tsc && node scripts/copy-icons.js",
     "dev": "tsc --watch",
     "lint": "eslint nodes credentials --ext .ts",
     "lint:fix": "eslint nodes credentials --ext .ts --fix",
@@ -39,7 +39,8 @@
       "dist/credentials/BrowsercloudApi.credentials.js"
     ],
     "nodes": [
-      "dist/nodes/Browsercloud/Browsercloud.node.js"
+      "dist/nodes/Browsercloud/Browsercloud.node.js",
+      "dist/nodes/BrowsercloudAgent/BrowsercloudAgent.node.js"
     ]
   },
   "devDependencies": {
@@ -53,7 +54,8 @@
     "typescript": "5.4"
   },
   "dependencies": {
-    "@testmuai/browser-cloud": "*"
+    "@testmuai/browser-cloud": "*",
+    "playwright-core": "^1.59.1"
   },
   "peerDependencies": {
     "n8n-workflow": "*"
