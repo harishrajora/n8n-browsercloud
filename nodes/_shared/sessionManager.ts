@@ -54,7 +54,13 @@ const sessions = new Map<string, ManagedSession>();
 // ends up in the Map — the rest leak as orphan sessions on the dashboard.
 const inflight = new Map<string, Promise<ManagedSession>>();
 
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+// Idle releases must beat the cloud's own idle threshold (~90s on TestMu) or
+// the dashboard reports "idle timeout" and we waste billable time. Setting
+// idle = 60s + sweep every 20s means worst-case ~80s before release — under
+// the cloud's threshold but generous enough to absorb slow LLM thinking
+// between tool calls.
+const IDLE_TIMEOUT_MS = 60 * 1000;
+const REAPER_INTERVAL_MS = 20 * 1000;
 
 let reaperStarted = false;
 function startReaper(): void {
@@ -70,7 +76,7 @@ function startReaper(): void {
 				sessions.delete(executionId);
 			}
 		}
-	}, 60_000);
+	}, REAPER_INTERVAL_MS);
 	interval.unref();
 }
 
