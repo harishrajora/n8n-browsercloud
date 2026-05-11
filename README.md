@@ -223,7 +223,7 @@ Snapshot filtering:
 
 ## Limitations
 
-- **Only Playwright adapter for the Agent node.** Switching to Selenium or Puppeteer would require rewriting every action handler. The script-runner node has no such limit.
+- **Only Playwright adapter for the Agent node.** Switching to Selenium or Puppeteer would require rewriting every action handler. The script-runner node has no such limitation.
 - **No real Safari** via the Agent node (Playwright limitation; use the script-runner with Selenium for real Safari).
 - **No vision-based clicking** — the agent picks elements by ref number from the snapshot, not by looking at a screenshot. Screenshot is available as a separate action for vision-capable models that want it.
 - **Self-hosted n8n only** — community nodes don't run on n8n Cloud unless verified by n8n's review program.
