@@ -2,7 +2,7 @@
 
 An n8n community node that runs browser automation scripts on [TestMu AI Browser Cloud](https://www.testmuai.com/browser-cloud/) (formerly LambdaTest).
 
-The node is **framework-agnostic**: write your script in Playwright, Puppeteer, Selenium, WebdriverIO, or anything else that can connect to a remote browser. The node provides the cloud session; your script does whatever it wants with it.
+The node is **framework-agnostic**: write your script in Playwright, Puppeteer, Selenium, WebdriverIO, or anything else that can connect to a remote browser. The node provides the cloud session and a complete infrastructure with real devices; your script does whatever it wants with it.
 
 ## Install
 
