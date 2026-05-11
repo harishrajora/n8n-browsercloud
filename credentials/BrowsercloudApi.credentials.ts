@@ -31,13 +31,14 @@ export class BrowsercloudApi implements ICredentialType {
 	];
 
 	// Used by the "Test credential" button in the n8n UI.
-	// Hits a lightweight TestMu endpoint with HTTP Basic auth.
+	// Hits a lightweight TestMu endpoint with HTTP Basic auth using the
+	// credentials the user entered into this form.
 	authenticate: IAuthenticateGeneric = {
 		type: 'generic',
 		properties: {
 			auth: {
-				username: 'harishrtestmuai',
-				password: 'LT_KEzjKY8Sid0IMie212EvjVQwovGeNlI3oYRT0djv2jZIzPm',
+				username: '={{$credentials.username}}',
+				password: '={{$credentials.accessKey}}',
 			},
 		},
 	};
