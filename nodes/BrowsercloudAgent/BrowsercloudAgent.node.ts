@@ -36,6 +36,54 @@ export class BrowsercloudAgent implements INodeType {
 		credentials: [{ name: 'browsercloudApi', required: true }],
 		properties: [
 			{
+				displayName: 'Browser',
+				name: 'browserName',
+				type: 'options',
+				default: 'chrome',
+				description:
+					'Browser the cloud session uses. Set once for the whole workflow — sessions are persistent and cannot be switched mid-run. The "pw-*" options are Playwright\'s bundled browsers; "WebKit" is the closest equivalent to Safari (real Safari cannot be remote-controlled).',
+				options: [
+					{ name: 'Chrome', value: 'chrome' },
+					{ name: 'Microsoft Edge', value: 'MicrosoftEdge' },
+					{ name: 'Playwright Chromium', value: 'pw-chromium' },
+					{ name: 'Playwright Firefox', value: 'pw-firefox' },
+					{ name: 'Playwright WebKit (Safari-like)', value: 'pw-webkit' },
+				],
+			},
+			{
+				displayName: 'Platform',
+				name: 'platformName',
+				type: 'options',
+				default: 'Windows 11',
+				description:
+					'Operating system for the cloud session. Set once for the whole workflow. Pick a platform compatible with the browser above.',
+				options: [
+					{ name: 'Windows 11', value: 'Windows 11' },
+					{ name: 'Windows 10', value: 'Windows 10' },
+					{ name: 'macOS Sequoia', value: 'macOS Sequoia' },
+					{ name: 'macOS Sonoma', value: 'macOS Sonoma' },
+					{ name: 'macOS Ventura', value: 'macOS Ventura' },
+					{ name: 'macOS Monterey', value: 'macOS Monterey' },
+					{ name: 'Linux', value: 'Linux' },
+				],
+			},
+			{
+				displayName: 'Browser Version',
+				name: 'browserVersion',
+				type: 'options',
+				default: 'latest',
+				description:
+					'Browser version. "latest" tracks the newest stable release; "latest-1" is one major version behind, etc. Pick a specific number (custom) only if you need a fixed version for reproducibility.',
+				options: [
+					{ name: 'Latest', value: 'latest' },
+					{ name: 'Latest - 1', value: 'latest-1' },
+					{ name: 'Latest - 2', value: 'latest-2' },
+					{ name: 'Latest - 3', value: 'latest-3' },
+					{ name: 'Beta', value: 'beta' },
+					{ name: 'Dev', value: 'dev' },
+				],
+			},
+			{
 				displayName: 'Session Scope',
 				name: 'sessionScope',
 				type: 'options',
@@ -177,8 +225,14 @@ export class BrowsercloudAgent implements INodeType {
 			try {
 				const workflowName = this.getWorkflow().name || 'workflow';
 				const timestamp = new Date().toISOString().replace(/[:.T]/g, '-').slice(0, 19);
+				const browserName = this.getNodeParameter('browserName', i, 'Chrome') as string;
+				const platformName = this.getNodeParameter('platformName', i, 'Windows 11') as string;
+				const browserVersion = this.getNodeParameter('browserVersion', i, 'latest') as string;
 				session = await getOrCreateSession(sessionKey, credentials, {
 					sessionName: `${workflowName}_${timestamp}`,
+					browserName,
+					platformName,
+					browserVersion,
 				});
 				const result = await dispatch(action, i, this, session);
 				out.push({
