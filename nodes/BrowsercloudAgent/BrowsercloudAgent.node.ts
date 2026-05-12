@@ -28,7 +28,7 @@ export class BrowsercloudAgent implements INodeType {
 		group: ['transform'],
 		version: 1,
 		description:
-			'Drive a TestMu Browsercloud cloud browser from an AI Agent. One tool, multiple actions: navigate, snapshot, click, type, get_text, screenshot. The cloud session is created on first call and reused across the workflow execution.',
+			'Drive a TestMu browser on the cloud from an AI Agent. One tool, multiple actions: navigate, snapshot, click, type, get_text, screenshot. The cloud session is created on first call and reused across the workflow execution.',
 		defaults: { name: 'Browsercloud Agent' },
 		inputs: ['main'],
 		outputs: ['main'],
