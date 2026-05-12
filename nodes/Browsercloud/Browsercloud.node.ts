@@ -88,6 +88,14 @@ const { Browser } = require('@testmuai/browser-cloud');
 				description:
 					'Whether to keep processing remaining items if a script exits non-zero. Errors are returned in the output instead of stopping the run.',
 			},
+			{
+				displayName: 'Timeout (ms)',
+				name: 'timeoutMs',
+				type: 'number',
+				default: 300000,
+				description:
+					'Maximum runtime for the script in milliseconds. After this, the child process is killed and the script is reported as failed. Default 5 minutes.',
+			},
 		],
 	};
 
@@ -103,11 +111,12 @@ const { Browser } = require('@testmuai/browser-cloud');
 		for (let i = 0; i < items.length; i++) {
 			const script = this.getNodeParameter('script', i) as string;
 			const continueOnFail = this.getNodeParameter('continueOnFail', i) as boolean;
+			const timeoutMs = this.getNodeParameter('timeoutMs', i, 300000) as number;
 
 			const startedAt = Date.now();
 			let outcome: ScriptOutcome;
 			try {
-				outcome = await runScript(script, credentials, items[i]);
+				outcome = await runScript(script, credentials, items[i], timeoutMs);
 			} catch (err) {
 				if (continueOnFail) {
 					results.push({
@@ -174,15 +183,27 @@ async function runScript(
 	script: string,
 	credentials: { username: string; accessKey: string },
 	item: INodeExecutionData,
+	timeoutMs: number,
 ): Promise<ScriptOutcome> {
 	const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'browsercloud-'));
 	const scriptPath = path.join(tempDir, `script-${randomUUID()}.js`);
 	await fs.writeFile(scriptPath, script, 'utf8');
 
-	// Resolve the package's own node_modules so the spawned child can find
-	// @testmuai/browser-cloud (and any other deps) even though the tempfile
-	// lives in the OS temp dir, where Node's module-walk wouldn't find them.
-	const packageNodeModules = path.resolve(__dirname, '..', '..', '..', 'node_modules');
+	// Set NODE_PATH to several parent node_modules directories so the spawned
+	// child can resolve @testmuai/browser-cloud regardless of how the package
+	// was installed:
+	//   - npm link / repo-local: deps in <pkg>/node_modules
+	//   - n8n community install: npm flattens, deps land one level higher
+	//   - hoisted monorepos: deps land even higher
+	// Node will pick whichever path actually contains the module.
+	const candidates = [
+		path.resolve(__dirname, '..', '..', '..', 'node_modules'),
+		path.resolve(__dirname, '..', '..', '..', '..', 'node_modules'),
+		path.resolve(__dirname, '..', '..', '..', '..', '..', 'node_modules'),
+	];
+	const nodePathParts = [...candidates];
+	if (process.env.NODE_PATH) nodePathParts.push(process.env.NODE_PATH);
+	const nodePath = nodePathParts.join(path.delimiter);
 
 	try {
 		return await new Promise<ScriptOutcome>((resolve, reject) => {
@@ -192,15 +213,14 @@ async function runScript(
 					LT_USERNAME: credentials.username,
 					LT_ACCESS_KEY: credentials.accessKey,
 					N8N_ITEM_JSON: JSON.stringify(item.json ?? {}),
-					NODE_PATH: process.env.NODE_PATH
-						? `${packageNodeModules}${path.delimiter}${process.env.NODE_PATH}`
-						: packageNodeModules,
+					NODE_PATH: nodePath,
 				},
 				stdio: ['ignore', 'pipe', 'pipe'],
 			});
 
 			let stdout = '';
 			let stderr = '';
+			let timedOut = false;
 			child.stdout.on('data', (chunk: Buffer) => {
 				stdout += chunk.toString();
 			});
@@ -208,8 +228,24 @@ async function runScript(
 				stderr += chunk.toString();
 			});
 
-			child.on('error', reject);
+			const timer =
+				timeoutMs > 0
+					? setTimeout(() => {
+							timedOut = true;
+							child.kill('SIGKILL');
+					  }, timeoutMs)
+					: null;
+
+			child.on('error', (err) => {
+				if (timer) clearTimeout(timer);
+				reject(err);
+			});
 			child.on('close', (exitCode) => {
+				if (timer) clearTimeout(timer);
+				if (timedOut) {
+					reject(new Error(`Script exceeded ${timeoutMs}ms timeout and was killed`));
+					return;
+				}
 				resolve({ stdout, stderr, exitCode: exitCode ?? -1 });
 			});
 		});
