@@ -41,13 +41,13 @@ export class BrowsercloudAgent implements INodeType {
 				type: 'options',
 				default: 'chrome',
 				description:
-					'Browser the cloud session uses. Set once for the whole workflow — sessions are persistent and cannot be switched mid-run. The "pw-*" options are Playwright\'s bundled browsers; "WebKit" is the closest equivalent to Safari (real Safari cannot be remote-controlled).',
+					'Browser the cloud session executes the actions on. Set once for the whole workflow — sessions are persistent and cannot be switched mid-run. The "pw-*" options are Playwright\'s bundled browsers; "WebKit" is the closest equivalent to Safari (real Safari cannot be remote-controlled).',
 				options: [
 					{ name: 'Chrome', value: 'chrome' },
 					{ name: 'Microsoft Edge', value: 'MicrosoftEdge' },
 					{ name: 'Playwright Chromium', value: 'pw-chromium' },
 					{ name: 'Playwright Firefox', value: 'pw-firefox' },
-					{ name: 'Playwright WebKit (Safari-like)', value: 'pw-webkit' },
+					{ name: 'Playwright WebKit (Safari)', value: 'pw-webkit' },
 				],
 			},
 			{
@@ -56,7 +56,7 @@ export class BrowsercloudAgent implements INodeType {
 				type: 'options',
 				default: 'Windows 11',
 				description:
-					'Operating system for the cloud session. Set once for the whole workflow. Pick a platform compatible with the browser above.',
+					'Operating system to be used for the cloud session. Set once for the whole workflow. Pick a platform compatible with the browser above.',
 				options: [
 					{ name: 'Windows 11', value: 'Windows 11' },
 					{ name: 'Windows 10', value: 'Windows 10' },
@@ -73,7 +73,7 @@ export class BrowsercloudAgent implements INodeType {
 				type: 'options',
 				default: 'latest',
 				description:
-					'Browser version. "latest" tracks the newest stable release; "latest-1" is one major version behind, etc. Pick a specific number (custom) only if you need a fixed version for reproducibility.',
+					'Browser version. "latest" tracks the newest stable release; "latest-1" is one major version behind, and so on. Pick a specific number (custom) only if you need a fixed version for reproducibility.',
 				options: [
 					{ name: 'Latest', value: 'latest' },
 					{ name: 'Latest - 1', value: 'latest-1' },
