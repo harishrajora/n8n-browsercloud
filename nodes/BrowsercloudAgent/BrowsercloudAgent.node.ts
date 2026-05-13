@@ -252,13 +252,12 @@ export class BrowsercloudAgent implements INodeType {
 			} catch (err) {
 				throw new NodeOperationError(
 					this.getNode(),
-					`Browsercloud Agent (${action}) failed: ${(err as Error).message}`,
+					`Browsercloud Agent (${action}) failed with the following error: ${(err as Error).message}`,
 					{ itemIndex: i },
 				);
 			} finally {
 				if (sessionScope === 'call' && session) {
 					await releaseSession(sessionKey).catch(() => {
-						/* best effort */
 					});
 				}
 			}

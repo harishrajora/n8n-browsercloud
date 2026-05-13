@@ -43,10 +43,13 @@ export class Browsercloud implements INodeType {
 				default: `// Standalone Node.js script. Imports/require work normally.
 // Available in process.env:
 //   LT_USERNAME, LT_ACCESS_KEY  - your Browsercloud credentials
+//   N8N_WORKFLOW_NAME           - the n8n workflow's name (for dashboard labels)
 //   N8N_ITEM_JSON               - the current input item as JSON (optional)
 // Anything you write to stdout becomes part of the node output.
 
 const { Browser } = require('@testmuai/browser-cloud');
+
+const sessionName = \`\${process.env.N8N_WORKFLOW_NAME || 'n8n'}_\${new Date().toISOString().slice(0, 19)}\`;
 
 (async () => {
   const client = new Browser();
@@ -54,7 +57,7 @@ const { Browser } = require('@testmuai/browser-cloud');
     adapter: 'playwright',
     lambdatestOptions: {
       build: 'n8n-browsercloud',
-      name: 'Demo',
+      name: sessionName,
       platformName: 'Windows 11',
       browserName: 'Chrome',
       browserVersion: 'latest',
@@ -108,6 +111,8 @@ const { Browser } = require('@testmuai/browser-cloud');
 
 		const results: INodeExecutionData[] = [];
 
+		const workflowName = this.getWorkflow().name || 'workflow';
+
 		for (let i = 0; i < items.length; i++) {
 			const script = this.getNodeParameter('script', i) as string;
 			const continueOnFail = this.getNodeParameter('continueOnFail', i) as boolean;
@@ -116,7 +121,7 @@ const { Browser } = require('@testmuai/browser-cloud');
 			const startedAt = Date.now();
 			let outcome: ScriptOutcome;
 			try {
-				outcome = await runScript(script, credentials, items[i], timeoutMs);
+				outcome = await runScript(script, credentials, items[i], timeoutMs, workflowName);
 			} catch (err) {
 				if (continueOnFail) {
 					results.push({
@@ -184,6 +189,7 @@ async function runScript(
 	credentials: { username: string; accessKey: string },
 	item: INodeExecutionData,
 	timeoutMs: number,
+	workflowName: string,
 ): Promise<ScriptOutcome> {
 	const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'browsercloud-'));
 	const scriptPath = path.join(tempDir, `script-${randomUUID()}.js`);
@@ -212,6 +218,7 @@ async function runScript(
 					...process.env,
 					LT_USERNAME: credentials.username,
 					LT_ACCESS_KEY: credentials.accessKey,
+					N8N_WORKFLOW_NAME: workflowName,
 					N8N_ITEM_JSON: JSON.stringify(item.json ?? {}),
 					NODE_PATH: nodePath,
 				},
