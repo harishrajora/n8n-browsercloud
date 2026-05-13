@@ -36,7 +36,10 @@
   "n8n": {
     "n8nNodesApiVersion": 1,
     "credentials": [
-      "dist/credentials/BrowsercloudApi.credentials.js"
+      "dist/credentials/BrowsercloudApi.credentials.js",
+      "dist/credentials/BrowsercloudOpenAiApi.credentials.js",
+      "dist/credentials/BrowsercloudAnthropicApi.credentials.js",
+      "dist/credentials/BrowsercloudGoogleGeminiApi.credentials.js"
     ],
     "nodes": [
       "dist/nodes/Browsercloud/Browsercloud.node.js",

@@ -29,6 +29,18 @@ export class Browsercloud implements INodeType {
 				name: 'browsercloudApi',
 				required: true,
 			},
+			{
+				name: 'browsercloudOpenAiApi',
+				required: false,
+			},
+			{
+				name: 'browsercloudAnthropicApi',
+				required: false,
+			},
+			{
+				name: 'browsercloudGoogleGeminiApi',
+				required: false,
+			},
 		],
 		properties: [
 			{
@@ -109,6 +121,20 @@ const sessionName = \`\${process.env.N8N_WORKFLOW_NAME || 'n8n'}_\${new Date().t
 			accessKey: string;
 		};
 
+		// Optional LLM provider credentials — each is silently skipped when not
+		// configured on the node. Scripts that don't need them never see the env
+		// vars; scripts that do see them via process.env.OPENAI_API_KEY etc.
+		const extraEnv: Record<string, string> = {};
+		const openai = await tryGetCredential(this, 'browsercloudOpenAiApi');
+		if (openai?.apiKey) extraEnv.OPENAI_API_KEY = String(openai.apiKey);
+		const anthropic = await tryGetCredential(this, 'browsercloudAnthropicApi');
+		if (anthropic?.apiKey) extraEnv.ANTHROPIC_API_KEY = String(anthropic.apiKey);
+		const gemini = await tryGetCredential(this, 'browsercloudGoogleGeminiApi');
+		if (gemini?.apiKey) {
+			extraEnv.GEMINI_API_KEY = String(gemini.apiKey);
+			extraEnv.GOOGLE_API_KEY = String(gemini.apiKey);
+		}
+
 		const results: INodeExecutionData[] = [];
 
 		const workflowName = this.getWorkflow().name || 'workflow';
@@ -121,7 +147,7 @@ const sessionName = \`\${process.env.N8N_WORKFLOW_NAME || 'n8n'}_\${new Date().t
 			const startedAt = Date.now();
 			let outcome: ScriptOutcome;
 			try {
-				outcome = await runScript(script, credentials, items[i], timeoutMs, workflowName);
+				outcome = await runScript(script, credentials, items[i], timeoutMs, workflowName, extraEnv);
 			} catch (err) {
 				if (continueOnFail) {
 					results.push({
@@ -184,24 +210,48 @@ interface ScriptOutcome {
 	exitCode: number;
 }
 
+async function tryGetCredential(
+	ctx: IExecuteFunctions,
+	name: string,
+): Promise<Record<string, unknown> | undefined> {
+	try {
+		return (await ctx.getCredentials(name)) as Record<string, unknown>;
+	} catch {
+		return undefined;
+	}
+}
+
 async function runScript(
 	script: string,
 	credentials: { username: string; accessKey: string },
 	item: INodeExecutionData,
 	timeoutMs: number,
 	workflowName: string,
+	extraEnv: Record<string, string>,
 ): Promise<ScriptOutcome> {
-	const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'browsercloud-'));
+	// Write the tempfile INSIDE the package directory (not /tmp) so Node's
+	// module resolver — which walks up from the script's location looking for
+	// node_modules — can find @testmuai/browser-cloud regardless of whether
+	// the user's script uses CommonJS require() or ESM import. NODE_PATH
+	// (used below) covers require() but ESM ignores NODE_PATH entirely, so
+	// the script's physical location is the only thing that makes both work.
+	const packageRoot = path.resolve(__dirname, '..', '..', '..');
+	const tempBase = path.join(packageRoot, '.n8n-script-tmp');
+	let tempDir: string;
+	try {
+		await fs.mkdir(tempBase, { recursive: true });
+		tempDir = await fs.mkdtemp(path.join(tempBase, 'run-'));
+	} catch {
+		// Package dir is read-only (some Docker setups). Fall back to os tmpdir;
+		// require() will still work via NODE_PATH, but ESM import won't.
+		tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'browsercloud-'));
+	}
 	const scriptPath = path.join(tempDir, `script-${randomUUID()}.js`);
 	await fs.writeFile(scriptPath, script, 'utf8');
 
-	// Set NODE_PATH to several parent node_modules directories so the spawned
-	// child can resolve @testmuai/browser-cloud regardless of how the package
-	// was installed:
-	//   - npm link / repo-local: deps in <pkg>/node_modules
-	//   - n8n community install: npm flattens, deps land one level higher
-	//   - hoisted monorepos: deps land even higher
-	// Node will pick whichever path actually contains the module.
+	// Also set NODE_PATH for CommonJS require() resolution. ESM ignores this,
+	// but for CJS scripts (the bulk of n8n's installed-package shapes) it lets
+	// require() find @testmuai/browser-cloud whether deps are flat or hoisted.
 	const candidates = [
 		path.resolve(__dirname, '..', '..', '..', 'node_modules'),
 		path.resolve(__dirname, '..', '..', '..', '..', 'node_modules'),
@@ -221,6 +271,7 @@ async function runScript(
 					N8N_WORKFLOW_NAME: workflowName,
 					N8N_ITEM_JSON: JSON.stringify(item.json ?? {}),
 					NODE_PATH: nodePath,
+					...extraEnv,
 				},
 				stdio: ['ignore', 'pipe', 'pipe'],
 			});
