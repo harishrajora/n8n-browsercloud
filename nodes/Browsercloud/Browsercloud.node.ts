@@ -1,4 +1,5 @@
 import {
+	IDataObject,
 	IExecuteFunctions,
 	INodeExecutionData,
 	INodeType,
@@ -111,6 +112,14 @@ const sessionName = \`\${process.env.N8N_WORKFLOW_NAME || 'n8n'}_\${new Date().t
 				description:
 					'Maximum runtime for the script in milliseconds. After this, the child process is killed and the script is reported as failed. Default 5 minutes.',
 			},
+			{
+				displayName: 'Verbose Output',
+				name: 'verbose',
+				type: 'boolean',
+				default: false,
+				description:
+					'When on, the output includes the raw stdout, stderr, and exit code of the script (useful for debugging). When off (default), the output is a clean summary with status, success flag, and result only.',
+			},
 		],
 	};
 
@@ -143,61 +152,76 @@ const sessionName = \`\${process.env.N8N_WORKFLOW_NAME || 'n8n'}_\${new Date().t
 			const script = this.getNodeParameter('script', i) as string;
 			const continueOnFail = this.getNodeParameter('continueOnFail', i) as boolean;
 			const timeoutMs = this.getNodeParameter('timeoutMs', i, 300000) as number;
+			const verbose = this.getNodeParameter('verbose', i, false) as boolean;
 
 			const startedAt = Date.now();
-			let outcome: ScriptOutcome;
-			try {
-				outcome = await runScript(script, credentials, items[i], timeoutMs, workflowName, extraEnv);
-			} catch (err) {
+
+			if (!script || script.trim() === '') {
+				const processed: ProcessedOutcome = {
+					success: false,
+					status: 'invalid_input',
+					error: 'Script is empty',
+					durationMs: Date.now() - startedAt,
+				};
 				if (continueOnFail) {
-					results.push({
-						json: {
-							error: (err as Error).message,
-							durationMs: Date.now() - startedAt,
-						},
-						pairedItem: { item: i },
-					});
+					results.push({ json: toJson(processed, verbose), pairedItem: { item: i } });
 					continue;
 				}
-				throw new NodeOperationError(
-					this.getNode(),
-					`Script failed on item ${i}: ${(err as Error).message}`,
-					{ itemIndex: i },
-				);
+				throw new NodeOperationError(this.getNode(), processed.error!, { itemIndex: i });
+			}
+
+			let rawOutcome: ScriptOutcome | undefined;
+			let runError: Error | undefined;
+			try {
+				rawOutcome = await runScript(script, credentials, items[i], timeoutMs, workflowName, extraEnv);
+			} catch (err) {
+				runError = err as Error;
 			}
 
 			const durationMs = Date.now() - startedAt;
+			let processed: ProcessedOutcome;
 
-			if (outcome.exitCode === 0) {
-				const result = tryParseJson(outcome.stdout);
-				results.push({
-					json: {
-						...(result !== undefined ? { result: result as never } : {}),
-						stdout: outcome.stdout,
-						stderr: outcome.stderr,
-						exitCode: outcome.exitCode,
-						durationMs,
-					},
-					pairedItem: { item: i },
-				});
-			} else if (continueOnFail) {
-				results.push({
-					json: {
-						error: outcome.stderr.trim() || `Script exited with code ${outcome.exitCode}`,
-						stdout: outcome.stdout,
-						stderr: outcome.stderr,
-						exitCode: outcome.exitCode,
-						durationMs,
-					},
-					pairedItem: { item: i },
-				});
+			if (runError) {
+				const msg = runError.message;
+				const isTimeout = /exceeded.*timeout|killed/i.test(msg);
+				processed = {
+					success: false,
+					status: isTimeout ? 'timeout' : 'spawn_error',
+					error: msg,
+					durationMs,
+				};
+			} else if (rawOutcome!.exitCode === 0) {
+				processed = {
+					success: true,
+					status: 'completed',
+					result: tryParseJson(rawOutcome!.stdout),
+					stdout: rawOutcome!.stdout,
+					stderr: rawOutcome!.stderr,
+					exitCode: rawOutcome!.exitCode,
+					durationMs,
+				};
 			} else {
-				throw new NodeOperationError(
-					this.getNode(),
-					`Script failed on item ${i} (exit ${outcome.exitCode}): ${outcome.stderr.trim() || '(no stderr)'}`,
-					{ itemIndex: i },
-				);
+				processed = {
+					success: false,
+					status: 'script_error',
+					error: rawOutcome!.stderr.trim() || `Script exited with code ${rawOutcome!.exitCode}`,
+					stdout: rawOutcome!.stdout,
+					stderr: rawOutcome!.stderr,
+					exitCode: rawOutcome!.exitCode,
+					durationMs,
+				};
 			}
+
+			if (processed.success || continueOnFail) {
+				results.push({ json: toJson(processed, verbose), pairedItem: { item: i } });
+				continue;
+			}
+
+			throw new NodeOperationError(
+				this.getNode(),
+				`Script failed on item ${i} (${processed.status}): ${processed.error ?? '(no error message)'}`,
+				{ itemIndex: i },
+			);
 		}
 
 		return [results];
@@ -208,6 +232,43 @@ interface ScriptOutcome {
 	stdout: string;
 	stderr: string;
 	exitCode: number;
+}
+
+type OutcomeStatus = 'completed' | 'script_error' | 'timeout' | 'spawn_error' | 'invalid_input';
+
+interface ProcessedOutcome {
+	success: boolean;
+	status: OutcomeStatus;
+	result?: unknown;
+	error?: string;
+	stdout?: string;
+	stderr?: string;
+	exitCode?: number;
+	durationMs: number;
+}
+
+function toJson(o: ProcessedOutcome, verbose: boolean): IDataObject {
+	if (verbose) {
+		const json: IDataObject = {
+			success: o.success,
+			status: o.status,
+			durationMs: o.durationMs,
+			stdout: o.stdout ?? '',
+			stderr: o.stderr ?? '',
+			exitCode: o.exitCode ?? -1,
+		};
+		if (o.result !== undefined) json.result = o.result as never;
+		if (o.error !== undefined) json.error = o.error;
+		return json;
+	}
+	const json: IDataObject = {
+		success: o.success,
+		status: o.status,
+		durationMs: o.durationMs,
+	};
+	if (o.success && o.result !== undefined) json.result = o.result as never;
+	if (!o.success && o.error) json.error = o.error;
+	return json;
 }
 
 async function tryGetCredential(
