@@ -14,14 +14,15 @@ import { randomUUID } from 'crypto';
 
 export class Browsercloud implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Browsercloud',
+		displayName: 'TestMu AI (Formerly LambdaTest)',
 		name: 'browsercloud',
 		icon: 'file:browsercloud_logo.png',
 		group: ['transform'],
 		version: 1,
-		description: 'Run browser automation scripts on TestMu AI Browser Cloud',
+		description:
+			'Run browser automation scripts on TestMu AI Browser Cloud. Connect your existing Playwright, Puppeteer, or Selenium scripts to a scalable cloud browser infrastructure — no local setup required.',
 		defaults: {
-			name: 'Browsercloud',
+			name: 'TestMu AI (Formerly LambdaTest)',
 		},
 		inputs: ['main'],
 		outputs: ['main'],

@@ -22,14 +22,14 @@ import {
  */
 export class BrowsercloudAgent implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Browsercloud Agent',
+		displayName: 'TestMu AI (Formerly LambdaTest) Agent',
 		name: 'browsercloudAgent',
 		icon: 'file:browsercloud_logo.png',
 		group: ['transform'],
 		version: 1,
 		description:
-			'Gives an AI Agent the ability to operate a real web browser on TestMu Browser Cloud. The agent can open URLs, inspect page content, click on elements, fill out forms, and capture screenshots — all through one tool. A cloud browser is launched automatically the first time the tool is used and stays available throughout the workflow run, so the agent can navigate from page to page across multiple steps. The live session is visible on the TestMu Browser Cloud dashboard, where you can watch the agent in real time, replay video recordings, and inspect console/network logs after the run.',
-		defaults: { name: 'Browsercloud Agent' },
+			'Give your AI agent a real browser to work with. Opens URLs, clicks elements, fills forms, and captures screenshots — all through a single tool.',
+		defaults: { name: 'TestMu AI (Formerly LambdaTest) Agent' },
 		inputs: ['main'],
 		outputs: ['main'],
 		usableAsTool: true,
